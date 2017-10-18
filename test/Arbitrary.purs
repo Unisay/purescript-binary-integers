@@ -1,10 +1,11 @@
 module Test.Arbitrary where
 
 import Prelude
-import Data.Binary.UnsignedInt (UnsignedInt, tryFromInt)
-import Data.Maybe (fromJust)
+
+import Data.Binary (tryFromInt)
+import Data.Binary.UnsignedInt (UnsignedInt)
+import Data.Maybe (Maybe, fromJust)
 import Data.Newtype (class Newtype)
-import Data.Typelevel.Num (d31)
 import Data.Typelevel.Num.Aliases (D31)
 import Partial.Unsafe (unsafePartial)
 import Test.QuickCheck (class Arbitrary, arbitrary)
@@ -20,4 +21,6 @@ derive instance newtypeArbUnsignedInt31 :: Newtype ArbUnsignedInt31 _
 instance arbitraryUnsignedInt31 :: Arbitrary ArbUnsignedInt31 where
   arbitrary = do
    (ArbNonNegativeInt i) <- arbitrary
-   pure $ ArbUnsignedInt31 (unsafePartial $ fromJust $ tryFromInt d31 i)
+   let ui :: Maybe (UnsignedInt D31)
+       ui = tryFromInt i
+   pure $ ArbUnsignedInt31 (unsafePartial $ fromJust ui)

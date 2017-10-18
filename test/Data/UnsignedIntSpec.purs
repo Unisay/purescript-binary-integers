@@ -6,8 +6,8 @@ import Prelude
 
 import Control.Monad.Eff.Random (RANDOM)
 import Data.Array as A
-import Data.Binary (toInt)
-import Data.Binary.UnsignedInt (fromInt, toBinString)
+import Data.Binary (toBinString, toInt)
+import Data.Binary.UnsignedInt (fromInt)
 import Data.Foldable (all)
 import Data.Int as Int
 import Data.Newtype (unwrap)
