@@ -9,9 +9,10 @@ module Data.Binary.UnsignedInt
 import Data.Array as A
 import Data.Binary as Bin
 import Data.Typelevel.Num as Nat
-import Data.Binary (Bit)
+import Data.Binary (class Binary, Bit)
 import Data.BooleanAlgebra ((&&))
 import Data.Eq (class Eq, eq)
+import Data.Functor ((<$>))
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Ord ((<), (<=))
 import Data.Semigroup ((<>))
@@ -19,7 +20,10 @@ import Data.Show (class Show, show)
 import Data.Typelevel.Num (class GtEq, class Lt, D32)
 import Data.Typelevel.Num.Aliases (D31)
 import Data.Typelevel.Num.Sets (class Pos)
+import Data.Typelevel.Undefined (undefined)
+import Data.Unit (unit)
 import Partial.Unsafe (unsafeCrashWith)
+import Unsafe.Coerce (unsafeCoerce)
 
 
 data UnsignedInt b = UnsignedInt b (Array Bit)
@@ -57,3 +61,14 @@ tryFromInt b i =
 
 toBinString :: ∀ b . UnsignedInt b -> String
 toBinString (UnsignedInt _ bits) = Bin.toBinString bits
+
+instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
+  invert (UnsignedInt b bs) = UnsignedInt b (Bin.invert bs)
+  add' bit (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b <$> Bin.add' bit as bs
+  zero = UnsignedInt undefined Bin.zero
+  -- leftShift :: Bit -> a -> Overflow a
+  leftShift = unsafeCoerce unit
+  -- rightShift :: Bit -> a -> Overflow a
+  rightShift = unsafeCoerce unit
+  -- toBits :: a -> Array Bit
+  toBits (UnsignedInt b bs) = Bin.leftPadZero (Nat.toInt b) bs
