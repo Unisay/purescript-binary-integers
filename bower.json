@@ -8,7 +8,7 @@
   ],
   "dependencies": {
     "purescript-console": "^3.0.0",
-    "purescript-binary": "^0.0.2",
+    "purescript-binary": "^0.0.3",
     "purescript-typelevel": "^3.0.0",
     "purescript-sized-vectors": "^2.2.0",
     "purescript-partial": "^1.2.1",

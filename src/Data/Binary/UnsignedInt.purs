@@ -1,15 +1,13 @@
 module Data.Binary.UnsignedInt
   ( UnsignedInt
   , fromInt
-  , toInt
   , tryFromInt
   , toBinString
   ) where
 
 import Data.Array as A
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bit, numBits)
 import Data.Binary as Bin
-import Data.Typelevel.Num as Nat
-import Data.Binary (class Binary, Bit)
 import Data.BooleanAlgebra ((&&))
 import Data.Eq (class Eq, eq)
 import Data.Functor ((<$>))
@@ -18,12 +16,12 @@ import Data.Ord ((<), (<=))
 import Data.Semigroup ((<>))
 import Data.Show (class Show, show)
 import Data.Typelevel.Num (class GtEq, class Lt, D32)
+import Data.Typelevel.Num as Nat
 import Data.Typelevel.Num.Aliases (D31)
 import Data.Typelevel.Num.Sets (class Pos)
 import Data.Typelevel.Undefined (undefined)
-import Data.Unit (unit)
 import Partial.Unsafe (unsafeCrashWith)
-import Unsafe.Coerce (unsafeCoerce)
+import Type.Proxy (Proxy(..))
 
 
 data UnsignedInt b = UnsignedInt b (Array Bit)
@@ -41,12 +39,6 @@ instance showUnsignedInt :: Pos b => Show (UnsignedInt b) where
 -- | Behavior for negative `Int` values is unspecified.
 fromInt :: ∀ b . Pos b => GtEq b D31 => b -> Int -> UnsignedInt b
 fromInt b i = UnsignedInt b (Bin.fromInt i)
-
-toInt :: ∀ b . Pos b => Lt b D32 => UnsignedInt b -> Int
-toInt ui@(UnsignedInt b bits) =
-  -- Safe "by construction"
-  fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt bits)
-    where err = "Failed to convert " <> show ui <> " to Int"
 
 -- | Converts `Int` value to `UnsignedInt b` for b > 0
 -- | Returns `Just` for non-negative `Int` values that fit in b bits.
@@ -66,9 +58,22 @@ instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
   invert (UnsignedInt b bs) = UnsignedInt b (Bin.invert bs)
   add' bit (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b <$> Bin.add' bit as bs
   zero = UnsignedInt undefined Bin.zero
-  -- leftShift :: Bit -> a -> Overflow a
-  leftShift = unsafeCoerce unit
-  -- rightShift :: Bit -> a -> Overflow a
-  rightShift = unsafeCoerce unit
-  -- toBits :: a -> Array Bit
+  leftShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.leftShift bit bs
+  rightShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.rightShift bit bs
   toBits (UnsignedInt b bs) = Bin.leftPadZero (Nat.toInt b) bs
+
+instance fixedUnsignedInt :: Pos b => Fixed (UnsignedInt b) where
+  numBits _ = Nat.toInt (undefined :: b)
+  tryFromBits bits =
+    if A.length bits <= numBits p
+    then Just (UnsignedInt undefined bits)
+    else Nothing
+    where
+      p :: Proxy (UnsignedInt b)
+      p = Proxy
+
+instance fitsIntUnsignedInt :: (Pos b, Lt b D32) => FitsInt (UnsignedInt b) where
+  toInt ui@(UnsignedInt b bits) =
+    -- Safe "by construction"
+    fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt bits)
+      where err = "Failed to convert " <> show ui <> " to Int"

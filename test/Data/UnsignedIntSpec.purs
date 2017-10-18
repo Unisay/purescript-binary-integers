@@ -3,11 +3,13 @@ module Data.UnsignedInt.Spec
   ) where
 
 import Prelude
-import Data.Int as Int
+
 import Control.Monad.Eff.Random (RANDOM)
 import Data.Array as A
-import Data.Binary.UnsignedInt (fromInt, toBinString, toInt)
+import Data.Binary (toInt)
+import Data.Binary.UnsignedInt (fromInt, toBinString)
 import Data.Foldable (all)
+import Data.Int as Int
 import Data.Newtype (unwrap)
 import Data.String (toCharArray, null)
 import Data.Typelevel.Num (class GtEq, class Pos, d32, d99)
