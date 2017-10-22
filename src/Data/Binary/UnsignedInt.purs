@@ -5,11 +5,10 @@ module Data.Binary.UnsignedInt
 
 import Prelude
 
-import Data.Binary (class Binary, class FitsInt, class Fixed, _0, _1, bitsLength, double, half, isOdd, numBits, unsafeAdd)
+import Data.Array as A
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(..), _0, _1, numBits)
 import Data.Binary as Bin
-import Data.Bits (Bits)
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
-import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num (class GtEq, class Lt, D32)
 import Data.Typelevel.Num as Nat
 import Data.Typelevel.Num.Aliases (D31)
@@ -35,6 +34,9 @@ instance showUnsignedInt :: Pos b => Show (UnsignedInt b) where
 fromInt :: ∀ b . Pos b => GtEq b D31 => b -> Int -> UnsignedInt b
 fromInt b i = UnsignedInt b (Bin.fromInt i)
 
+instance ordUnsignedInt :: Pos b => Ord (UnsignedInt b) where
+  compare (UnsignedInt n as) (UnsignedInt _ bs) = compare as bs
+
 instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
   _0 = UnsignedInt undefined _0
   _1 = UnsignedInt undefined _1
@@ -46,8 +48,8 @@ instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
 
 instance fixedUnsignedInt :: Pos b => Fixed (UnsignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)
-  tryFromBits bits =
-    if bitsLength bits <= numBits p
+  tryFromBits bits@(Bits bs) =
+    if A.length bs <= numBits p
     then Just (UnsignedInt undefined bits)
     else Nothing
     where
