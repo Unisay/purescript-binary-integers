@@ -9,7 +9,7 @@ import Data.Array as A
 import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(..), _0, _1, numBits)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
-import Data.Typelevel.Num (class GtEq, class Lt, D32)
+import Data.Typelevel.Num (class GtEq, class Lt, type (:*), D1, D16, D2, D32, D5, D6, D64, D8)
 import Data.Typelevel.Num as Nat
 import Data.Typelevel.Num.Aliases (D31)
 import Data.Typelevel.Num.Sets (class Pos)
@@ -17,6 +17,12 @@ import Data.Typelevel.Undefined (undefined)
 import Partial.Unsafe (unsafeCrashWith)
 import Type.Proxy (Proxy(..))
 
+type Uint8   = UnsignedInt D8
+type Uint16  = UnsignedInt D16
+type Uint32  = UnsignedInt D32
+type Uint64  = UnsignedInt D64
+type Uint128 = UnsignedInt (D1 :* D2 :* D8)
+type Uint256 = UnsignedInt (D2 :* D5 :* D6)
 
 data UnsignedInt b = UnsignedInt b Bits
 
@@ -61,24 +67,3 @@ instance fitsIntUnsignedInt :: (Pos b, Lt b D32) => FitsInt (UnsignedInt b) wher
     -- Safe "by construction"
     fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt bits)
       where err = "Failed to convert " <> show ui <> " to Int"
-
-
-{-
-
-
-
-multiply :: ∀ a. Binary a => a -> a -> Overflow (Maybe Bits) a
-multiply md mr = foldl g (Overflow Nothing) partialProducts where
-  g :: Overflow (Maybe Bits) a -> Bits -> Overflow (Maybe Bits) a
-  g = unsafeCoerce unit
-  partialProducts :: Array Bits
-  partialProducts = A.filter lastBitIs1 (unfoldr f initialState)
-  lastBitIs1 :: Bits -> Boolean
-  lastBitIs1 (Bits (NonEmpty _ bits)) = maybe false (eq _1) (A.last bits)
-  initialState :: Tuple (Array Bit) Bits
-  initialState = Tuple (bitsArray $ toBits md) (toBits mr)
-  f :: Tuple (Array Bit) Bits -> Maybe (Tuple Bits (Tuple (Array Bit) Bits))
-  f (Tuple [] mdr) = Nothing
-  f (Tuple mdb mdr) = A.tail mdb <#> \shr -> (Tuple shifted (Tuple shr shifted))
-     where shifted = mdr <> _0
--}
