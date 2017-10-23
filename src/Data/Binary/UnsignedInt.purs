@@ -6,7 +6,7 @@ module Data.Binary.UnsignedInt
 import Prelude
 
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(..), _0, _1, numBits)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, numBits)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Typelevel.Num (class GtEq, class Lt, type (:*), D1, D16, D2, D32, D5, D6, D64, D8)
@@ -51,6 +51,10 @@ instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
   leftShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.leftShift bit bs
   rightShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.rightShift bit bs
   toBits (UnsignedInt b bs) = bs
+
+instance boundedUnsignedInt :: Pos b => Bounded (UnsignedInt b) where
+  bottom = _0
+  top = UnsignedInt undefined (Bits (A.replicate (Nat.toInt (undefined :: b)) _1))
 
 instance fixedUnsignedInt :: Pos b => Fixed (UnsignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)
