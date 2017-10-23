@@ -6,7 +6,7 @@ module Data.Binary.UnsignedInt
 import Prelude
 
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, numBits)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, modAdd, modMul, numBits)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Typelevel.Num (class GtEq, class Lt, type (:*), D1, D16, D2, D32, D5, D6, D64, D8)
@@ -71,3 +71,9 @@ instance fitsIntUnsignedInt :: (Pos b, Lt b D32) => FitsInt (UnsignedInt b) wher
     -- Safe "by construction"
     fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt bits)
       where err = "Failed to convert " <> show ui <> " to Int"
+
+instance semiringUnsignedInt :: Pos b => Semiring (UnsignedInt b) where
+  zero = _0
+  add = modAdd
+  one = _1
+  mul = modMul
