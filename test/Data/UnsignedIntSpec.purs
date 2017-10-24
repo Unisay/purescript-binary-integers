@@ -12,9 +12,10 @@ import Data.Foldable (all)
 import Data.Int as Int
 import Data.Newtype (unwrap)
 import Data.String (toCharArray, null)
-import Data.Typelevel.Num (class GtEq, class Pos, d32, d99)
+import Data.Tuple (Tuple(..))
+import Data.Typelevel.Num (class GtEq, class Pos, d31, d32, d99)
 import Data.Typelevel.Num.Aliases (D31)
-import Test.Arbitrary (ArbNonNegativeInt(..), ArbUnsignedInt31(..))
+import Test.Arbitrary (ArbNonNegativeInt(..), ArbUnsignedInt31(..), NonOverflowingMultiplicands(..))
 import Test.QuickCheck (Result, (<?>), (===))
 import Test.Unit (TestSuite, suite, test)
 import Test.Unit.QuickCheck (quickCheck)
@@ -27,6 +28,8 @@ spec = suite "UnsignedInt" do
   test "toBinString contains only bin digits" $ quickCheck propBinString
   test "toBinString isn't empty" $ quickCheck propBinStringEmptiness
   test "toBinString produces unique representation" $ quickCheck propBinStringUniqness
+  test "addition" $ quickCheck propAddition
+  test "multiplication" $ quickCheck propMultiplication
 
 
 propFromInt :: ∀ b . Pos b => GtEq b D31 =>
@@ -53,3 +56,11 @@ propBinStringUniqness :: Array ArbUnsignedInt31 -> Result
 propBinStringUniqness as = A.length sts === A.length uis where
   sts = A.nub $ map toBinString uis
   uis = A.nub $ map unwrap as
+
+propAddition :: ArbNonNegativeInt -> ArbNonNegativeInt -> Result
+propAddition (ArbNonNegativeInt a) (ArbNonNegativeInt b) =
+  a + b === toInt (u a + u b) where u = fromInt d31
+
+propMultiplication :: NonOverflowingMultiplicands -> Result
+propMultiplication (NonOverflowingMultiplicands (Tuple a b)) =
+  a * b === toInt (u a * u b) where u = fromInt d31

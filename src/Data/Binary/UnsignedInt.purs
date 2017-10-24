@@ -6,7 +6,7 @@ module Data.Binary.UnsignedInt
 import Prelude
 
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, modAdd, modMul, numBits)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, diffFixed, modAdd, modMul, numBits)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Typelevel.Num (class GtEq, class Lt, type (:*), D1, D16, D2, D32, D5, D6, D64, D8)
@@ -50,7 +50,7 @@ instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
   add' bit (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b <$> Bin.add' bit as bs
   leftShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.leftShift bit bs
   rightShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.rightShift bit bs
-  toBits (UnsignedInt b bs) = bs
+  toBits (UnsignedInt b bs) = Bin.addLeadingZeros (Nat.toInt b) bs
 
 instance boundedUnsignedInt :: Pos b => Bounded (UnsignedInt b) where
   bottom = _0
@@ -58,11 +58,12 @@ instance boundedUnsignedInt :: Pos b => Bounded (UnsignedInt b) where
 
 instance fixedUnsignedInt :: Pos b => Fixed (UnsignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)
-  tryFromBits bits@(Bits bs) =
-    if A.length bs <= numBits p
-    then Just (UnsignedInt undefined bits)
+  tryFromBits (Bits bits) =
+    if A.length stripped <= numBits p
+    then Just (UnsignedInt undefined (Bits stripped))
     else Nothing
     where
+      stripped = A.dropWhile (eq _0) bits
       p :: Proxy (UnsignedInt b)
       p = Proxy
 
@@ -77,3 +78,6 @@ instance semiringUnsignedInt :: Pos b => Semiring (UnsignedInt b) where
   add = modAdd
   one = _1
   mul = modMul
+
+instance ringUnsignedInt :: Pos b => Ring (UnsignedInt b) where
+  sub = diffFixed
