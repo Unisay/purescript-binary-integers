@@ -9,10 +9,8 @@ import Data.Array as A
 import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, diffFixed, modAdd, modMul, numBits)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
-import Data.Typelevel.Num (class GtEq, class Lt, type (:*), D1, D16, D2, D32, D5, D6, D64, D8)
+import Data.Typelevel.Num (class Pos, class GtEq, class Lt, type (:*), D1, D16, D2, D31, D32, D5, D6, D64, D8)
 import Data.Typelevel.Num as Nat
-import Data.Typelevel.Num.Aliases (D31)
-import Data.Typelevel.Num.Sets (class Pos)
 import Data.Typelevel.Undefined (undefined)
 import Partial.Unsafe (unsafeCrashWith)
 import Type.Proxy (Proxy(..))
