@@ -1,12 +1,14 @@
 module Data.Binary.SignedInt
   ( SignedInt
   , fromInt
+  , isNegative
   ) where
 
 import Prelude
 
+import Data.Array (head)
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, diffFixed, modAdd, modMul, numBits)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bit(..), Bits(Bits), _0, _1, diffFixed, modAdd, modMul, numBits)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Ord (abs)
@@ -52,19 +54,20 @@ fromInt b i = SignedInt b signed where
   width = Nat.toInt b
   bits = Bin.fromInt (abs i)
 
-
-
-
-
-
-
-
-
-
-
+isNegative :: ∀ b . Pos b => SignedInt b -> Boolean
+isNegative (SignedInt _ (Bits bits)) = head bits == Just (Bit true)
 
 instance ordSignedInt :: Pos b => Ord (SignedInt b) where
-  compare (SignedInt n as) (SignedInt _ bs) = compare as bs
+  compare a b | isNegative a && not (isNegative b) = LT
+  compare a b | not (isNegative a) && isNegative b = GT
+  compare (SignedInt _ a) (SignedInt _ b) = compare a b
+
+
+
+
+
+
+
 
 instance binarySignedInt :: Pos b => Binary (SignedInt b) where
   _0 = SignedInt undefined _0
