@@ -11,7 +11,7 @@ import Data.Binary.UnsignedInt (fromInt)
 import Data.Foldable (all)
 import Data.Int as Int
 import Data.Newtype (unwrap)
-import Data.String (toCharArray, null)
+import Data.String as Str
 import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num (class GtEq, class Pos, d31, d32, d99)
 import Data.Typelevel.Num.Aliases (D31)
@@ -35,21 +35,25 @@ spec = suite "UnsignedInt" do
 propFromInt :: ∀ b . Pos b => GtEq b D31 =>
                b -> ArbNonNegativeInt -> Result
 propFromInt b (ArbNonNegativeInt i) =
-  Int.toStringAs Int.binary i === toBinString (fromInt b i)
+  expected === actual where
+    expected = Int.toStringAs Int.binary i
+    actual = Str.dropWhile (eq '0') (toBinString (fromInt b i))
 
 propToInt :: ArbUnsignedInt31 -> Result
 propToInt (ArbUnsignedInt31 ui) =
-  toBinString ui === Int.toStringAs Int.binary (toInt ui)
+  expected === actual where
+    expected = Str.dropWhile (eq '0') (toBinString ui)
+    actual = Int.toStringAs Int.binary (toInt ui)
 
 propBinString :: ArbUnsignedInt31 -> Result
 propBinString (ArbUnsignedInt31 ui) =
   let x = toBinString ui
-  in all (\d -> d == '1' || d == '0') (toCharArray x)
+  in all (\d -> d == '1' || d == '0') (Str.toCharArray x)
     <?> "String representation of UnsignedInt contains not only digits 1 and 0: " <> x
 
 propBinStringEmptiness :: ArbUnsignedInt31 -> Result
 propBinStringEmptiness (ArbUnsignedInt31 ui) =
-  not null (toBinString ui)
+  not Str.null (toBinString ui)
     <?> "String representation of UnsignedInt must not be empty"
 
 propBinStringUniqness :: Array ArbUnsignedInt31 -> Result
