@@ -6,8 +6,9 @@ module Data.Binary.UnsignedInt
 import Prelude
 
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, and, diffFixed, modAdd, modMul, numBits, or, xor)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, and, diffFixed, modAdd, modMul, numBits, or, toStringAs, xor)
 import Data.Binary as Bin
+import Data.Binary.BaseN (class BaseN)
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Typelevel.Num (class Pos, class GtEq, class Lt, type (:*), D1, D16, D2, D31, D32, D5, D6, D64, D8)
 import Data.Typelevel.Num as Nat
@@ -82,3 +83,6 @@ instance semiringUnsignedInt :: Pos b => Semiring (UnsignedInt b) where
 
 instance ringUnsignedInt :: Pos b => Ring (UnsignedInt b) where
   sub = diffFixed
+
+instance baseNUnsignedInt :: Pos b => BaseN (UnsignedInt b) where
+  toBase r (UnsignedInt b bits) = toStringAs r bits 

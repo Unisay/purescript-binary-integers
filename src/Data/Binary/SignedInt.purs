@@ -8,9 +8,10 @@ import Prelude
 
 import Data.Array (head)
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bit(..), Bits(Bits), Overflow(..), _0, _1, and, diffFixed, modAdd, modMul, msb, numBits, or, xor)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bit(..), Bits(Bits), Overflow(..), _0, _1, and, diffFixed, modAdd, modMul, msb, numBits, or, toStringAs, xor)
 import Data.Binary as Bin
-import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
+import Data.Binary.BaseN (class BaseN, toBase)
+import Data.Maybe (Maybe(Nothing, Just), fromMaybe, fromMaybe')
 import Data.Ord (abs)
 import Data.Typelevel.Num (class GtEq, class Lt, type (:*), D1, D16, D2, D32, D5, D6, D64, D8)
 import Data.Typelevel.Num as Nat
@@ -54,7 +55,7 @@ fromInt b i = SignedInt b signed where
   width = Nat.toInt b
   bits = Bin.fromInt (abs i)
 
-isNegative :: ∀ b . Pos b => SignedInt b -> Boolean
+isNegative :: ∀ b . SignedInt b -> Boolean
 isNegative (SignedInt _ (Bits bits)) = head bits == Just (Bit true)
 
 instance ordSignedInt :: Pos b => Ord (SignedInt b) where
@@ -108,3 +109,7 @@ instance semiringSignedInt :: Pos b => Semiring (SignedInt b) where
 
 instance ringSignedInt :: Pos b => Ring (SignedInt b) where
   sub = diffFixed
+
+instance baseNSignedInt :: Pos b => BaseN (SignedInt b) where
+  toBase r s | isNegative s = "-" <> toBase r (negate s)
+  toBase r (SignedInt _ (Bits bits)) = toStringAs r (Bits $ fromMaybe [_0] (A.tail bits))
