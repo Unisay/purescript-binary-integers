@@ -8,7 +8,7 @@ import Prelude
 
 import Data.Array (head)
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bit(..), Bits(Bits), Overflow(..), _0, _1, diffFixed, modAdd, modMul, numBits)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bit(..), Bits(Bits), Overflow(..), _0, _1, and, diffFixed, modAdd, modMul, msb, numBits, or, xor)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Ord (abs)
@@ -65,21 +65,23 @@ instance ordSignedInt :: Pos b => Ord (SignedInt b) where
 instance binarySignedInt :: Pos b => Binary (SignedInt b) where
   _0 = SignedInt undefined _0
   _1 = SignedInt undefined _1
+  and (SignedInt b as) (SignedInt _ bs) = SignedInt b (and as bs)
+  xor (SignedInt b as) (SignedInt _ bs) = SignedInt b (xor as bs)
+  or (SignedInt b as) (SignedInt _ bs) = SignedInt b (or as bs)
   invert (SignedInt b bs) = SignedInt b (Bin.invert bs)
   add' bit (SignedInt b as) (SignedInt _ bs) =
     let (Overflow o xs) = Bin.add' bit as bs
-        
-    in SignedInt b <$> ?x
-
-
-
+    in Overflow (xor o (msb xs)) (SignedInt b xs)
   leftShift bit (SignedInt b bs) = SignedInt b <$> Bin.leftShift bit bs
   rightShift bit (SignedInt b bs) = SignedInt b <$> Bin.rightShift bit bs
   toBits (SignedInt _ bs) = bs
 
 instance boundedSignedInt :: Pos b => Bounded (SignedInt b) where
-  bottom = _0
-  top = SignedInt undefined (Bits (A.replicate (Nat.toInt (undefined :: b)) _1))
+  bottom = SignedInt undefined (Bits (A.cons _1 (A.replicate (Nat.toInt (undefined :: b)) _0)))
+  top    = SignedInt undefined (Bits (A.cons _0 (A.replicate (Nat.toInt (undefined :: b)) _1)))
+
+
+
 
 instance fixedSignedInt :: Pos b => Fixed (SignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)

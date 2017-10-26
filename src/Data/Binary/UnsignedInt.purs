@@ -6,7 +6,7 @@ module Data.Binary.UnsignedInt
 import Prelude
 
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, diffFixed, modAdd, modMul, numBits)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), _0, _1, and, diffFixed, modAdd, modMul, numBits, or, xor)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Typelevel.Num (class Pos, class GtEq, class Lt, type (:*), D1, D16, D2, D31, D32, D5, D6, D64, D8)
@@ -44,6 +44,9 @@ instance ordUnsignedInt :: Pos b => Ord (UnsignedInt b) where
 instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
   _0 = UnsignedInt undefined _0
   _1 = UnsignedInt undefined _1
+  and (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b (and as bs)
+  xor (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b (xor as bs)
+  or  (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b (or as bs)
   invert (UnsignedInt b bs) = UnsignedInt b (Bin.invert bs)
   add' bit (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b <$> Bin.add' bit as bs
   leftShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.leftShift bit bs
