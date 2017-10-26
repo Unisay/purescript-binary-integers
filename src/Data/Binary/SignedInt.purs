@@ -8,7 +8,7 @@ import Prelude
 
 import Data.Array (head)
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bit(..), Bits(Bits), _0, _1, diffFixed, modAdd, modMul, numBits)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bit(..), Bits(Bits), Overflow(..), _0, _1, diffFixed, modAdd, modMul, numBits)
 import Data.Binary as Bin
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe')
 import Data.Ord (abs)
@@ -62,21 +62,20 @@ instance ordSignedInt :: Pos b => Ord (SignedInt b) where
   compare a b | not (isNegative a) && isNegative b = GT
   compare (SignedInt _ a) (SignedInt _ b) = compare a b
 
-
-
-
-
-
-
-
 instance binarySignedInt :: Pos b => Binary (SignedInt b) where
   _0 = SignedInt undefined _0
   _1 = SignedInt undefined _1
   invert (SignedInt b bs) = SignedInt b (Bin.invert bs)
-  add' bit (SignedInt b as) (SignedInt _ bs) = SignedInt b <$> Bin.add' bit as bs
+  add' bit (SignedInt b as) (SignedInt _ bs) =
+    let (Overflow o xs) = Bin.add' bit as bs
+        
+    in SignedInt b <$> ?x
+
+
+
   leftShift bit (SignedInt b bs) = SignedInt b <$> Bin.leftShift bit bs
   rightShift bit (SignedInt b bs) = SignedInt b <$> Bin.rightShift bit bs
-  toBits (SignedInt b bs) = Bin.addLeadingZeros (Nat.toInt b) bs
+  toBits (SignedInt _ bs) = bs
 
 instance boundedSignedInt :: Pos b => Bounded (SignedInt b) where
   bottom = _0
