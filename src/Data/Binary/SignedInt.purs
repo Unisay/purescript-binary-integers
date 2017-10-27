@@ -2,18 +2,18 @@ module Data.Binary.SignedInt
   ( SignedInt
   , fromInt
   , isNegative
+  , complement
   ) where
 
 import Prelude
 
-import Data.Array (head)
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bit(..), Bits(Bits), Overflow(..), _0, _1, and, diffFixed, modAdd, modMul, msb, numBits, or, toStringAs, xor)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), Overflow(Overflow), _0, _1, and, diffFixed, head, modAdd, modMul, msb, numBits, or, tail, toStringAs, xor)
 import Data.Binary as Bin
 import Data.Binary.BaseN (class BaseN, toBase)
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe, fromMaybe')
 import Data.Ord (abs)
-import Data.Typelevel.Num (class GtEq, class Lt, type (:*), D1, D16, D2, D32, D5, D6, D64, D8)
+import Data.Typelevel.Num (class GtEq, class LtEq, type (:*), D1, D16, D2, D32, D5, D6, D64, D8)
 import Data.Typelevel.Num as Nat
 import Data.Typelevel.Num.Sets (class Pos)
 import Data.Typelevel.Undefined (undefined)
@@ -37,26 +37,24 @@ instance showSignedInt :: Pos b => Show (SignedInt b) where
   show (SignedInt n bits) =
     "SignedInt" <> show (Nat.toInt n) <> "#" <> Bin.toBinString bits
 
--- | `Int` = Width
--- | `Boolean` = is negative
-twosComplement :: Int -> Boolean -> Bits -> Bits
-twosComplement width false bits = Bin.addLeadingZeros width bits
-twosComplement width true bits@(Bits bs) =
-  case compare (A.length bs) (width - 1) of
-  GT -> bits
-  EQ -> complement bits
-  LT -> complement (Bin.addLeadingZeros (width - 1) bits)
-  where complement = Bin.invert >>> Bin.unsafeAdd _1 >>> append _1
+complement :: ∀ b. Pos b => SignedInt b -> SignedInt b
+complement si = (Bin.invert >>> Bin.unsafeAdd _1) si
 
 -- | Converts `Int` value to `SignedInt b` for b >= 31
 fromInt :: ∀ b . Pos b => GtEq b D32 => b -> Int -> SignedInt b
 fromInt b i = SignedInt b signed where
-  signed = twosComplement width (i < 0) bits
-  width = Nat.toInt b
-  bits = Bin.fromInt (abs i)
+  signed = twosComplement (Nat.toInt b) (i < 0) (Bin.fromInt (abs i))
+  twosComplement :: Int -> Boolean -> Bits -> Bits
+  twosComplement w false bits = Bin.addLeadingZeros w bits
+  twosComplement w true bits@(Bits bs) =
+    case compare (A.length bs) (w - 1) of
+    GT -> bits
+    EQ -> compl bits
+    LT -> compl (Bin.addLeadingZeros (w - 1) bits)
+  compl = Bin.invert >>> Bin.unsafeAdd _1 >>> append _1
 
 isNegative :: ∀ b . SignedInt b -> Boolean
-isNegative (SignedInt _ (Bits bits)) = head bits == Just (Bit true)
+isNegative (SignedInt _ bits) = head bits == _1
 
 instance ordSignedInt :: Pos b => Ord (SignedInt b) where
   compare a b | isNegative a && not (isNegative b) = LT
@@ -95,11 +93,12 @@ instance fixedSignedInt :: Pos b => Fixed (SignedInt b) where
       p :: Proxy (SignedInt b)
       p = Proxy
 
-instance fitsIntSignedInt :: (Pos b, Lt b D32) => FitsInt (SignedInt b) where
-  toInt ui@(SignedInt b bits) =
+instance fitsIntSignedInt :: (Pos b, LtEq b D32) => FitsInt (SignedInt b) where
+  toInt si@(SignedInt _ bits) | (head bits) == _1 = negate (Bin.toInt (complement si))
+  toInt si@(SignedInt _ bits) = abs where
     -- Safe "by construction"
-    fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt bits)
-      where err = "Failed to convert " <> show ui <> " to Int"
+    abs = fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt (tail bits))
+    err = "Failed to convert " <> show si <> " to Int"
 
 instance semiringSignedInt :: Pos b => Semiring (SignedInt b) where
   zero = _0

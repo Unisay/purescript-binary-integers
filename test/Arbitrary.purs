@@ -3,18 +3,18 @@ module Test.Arbitrary where
 import Prelude
 
 import Data.Binary (tryFromInt)
+import Data.Binary.SignedInt (SignedInt, fromInt)
 import Data.Binary.UnsignedInt (UnsignedInt)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe, fromJust)
 import Data.Newtype (class Newtype)
 import Data.Tuple (Tuple(..))
-import Data.Typelevel.Num.Aliases (D31)
+import Data.Typelevel.Num.Aliases (D31, D32, d32)
 import Partial.Unsafe (unsafePartial)
 import Test.QuickCheck (class Arbitrary, arbitrary)
 import Test.QuickCheck.Gen (suchThat)
 
 newtype ArbNonNegativeInt = ArbNonNegativeInt Int
-
 instance arbitraryNonNegativeInt :: Arbitrary ArbNonNegativeInt where
   arbitrary = ArbNonNegativeInt <$> suchThat arbitrary (_ >= 0)
 
@@ -26,6 +26,12 @@ instance arbitraryUnsignedInt31 :: Arbitrary ArbUnsignedInt31 where
    let ui :: Maybe (UnsignedInt D31)
        ui = tryFromInt i
    pure $ ArbUnsignedInt31 (unsafePartial $ fromJust ui)
+
+newtype ArbSignedInt32 = ArbSignedInt32 (SignedInt D32)
+derive instance newtypeArbSignedInt32 :: Newtype ArbSignedInt32 _
+instance arbitrarySignedInt32 :: Arbitrary ArbSignedInt32 where
+  arbitrary = ArbSignedInt32 <$> fromInt d32 <$> arbitrary
+
 
 newtype NonOverflowingMultiplicands = NonOverflowingMultiplicands (Tuple Int Int)
 instance arbitraryNonOverflowingMultiplicands :: Arbitrary NonOverflowingMultiplicands where

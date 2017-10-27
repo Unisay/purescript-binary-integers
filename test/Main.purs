@@ -1,6 +1,7 @@
 module Test.Main where
 
 import Data.UnsignedInt.Spec as UnsignedInt
+import Data.SignedInt.Spec as SignedInt
 import Control.Monad.Aff.AVar (AVAR)
 import Control.Monad.Eff (Eff)
 import Control.Monad.Eff.Console (CONSOLE)
@@ -17,3 +18,4 @@ main :: ∀ e. Eff ( console     :: CONSOLE
                  ) Unit
 main = runTest do
   UnsignedInt.spec
+  SignedInt.spec
