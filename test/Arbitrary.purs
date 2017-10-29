@@ -8,11 +8,23 @@ import Data.Binary.UnsignedInt (UnsignedInt)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe, fromJust)
 import Data.Newtype (class Newtype)
+import Data.NonEmpty ((:|))
 import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num.Aliases (D31, D32, d32)
 import Partial.Unsafe (unsafePartial)
 import Test.QuickCheck (class Arbitrary, arbitrary)
-import Test.QuickCheck.Gen (suchThat)
+import Test.QuickCheck.Gen (oneOf, suchThat)
+
+newtype ArbInt = ArbInt Int
+instance arbitraryInt :: Arbitrary ArbInt where
+  arbitrary = ArbInt <$> oneOf gens where
+    gens = (pure 0) :| [ pure 1
+                       , pure (-1)
+                       , pure (bottom :: Int)
+                       , pure (top :: Int)
+                       , arbitrary
+                       ]
+
 
 newtype ArbNonNegativeInt = ArbNonNegativeInt Int
 instance arbitraryNonNegativeInt :: Arbitrary ArbNonNegativeInt where

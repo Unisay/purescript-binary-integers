@@ -79,19 +79,14 @@ instance boundedSignedInt :: Pos b => Bounded (SignedInt b) where
   bottom = SignedInt undefined (Bits (A.cons _1 (A.replicate (Nat.toInt (undefined :: b)) _0)))
   top    = SignedInt undefined (Bits (A.cons _0 (A.replicate (Nat.toInt (undefined :: b)) _1)))
 
-
-
-
 instance fixedSignedInt :: Pos b => Fixed (SignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)
-  tryFromBits (Bits bits) =
-    if A.length stripped <= numBits p
-    then Just (SignedInt undefined (Bits stripped))
-    else Nothing
-    where
-      stripped = A.dropWhile (eq _0) bits
-      p :: Proxy (SignedInt b)
-      p = Proxy
+  tryFromBits (Bits bits) = tryFromBits' (A.length bits) (numBits p) bits where
+    tryFromBits' len width bs | len == width = Just (SignedInt undefined (Bits bs))
+    tryFromBits' len width bs | len < width = Just (SignedInt undefined (Bin.addLeadingZeros width (Bits bs)))
+    tryFromBits' _ _ _ = Nothing
+    p :: Proxy (SignedInt b)
+    p = Proxy
 
 instance fitsIntSignedInt :: (Pos b, LtEq b D32) => FitsInt (SignedInt b) where
   toInt si@(SignedInt _ bits) | (head bits) == _1 = negate (Bin.toInt (complement si))
