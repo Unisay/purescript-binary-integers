@@ -3,4 +3,5 @@
 
 [![Build Status](https://travis-ci.org/Unisay/purescript-binary-integers.svg?branch=master)](https://travis-ci.org/Unisay/purescript-binary-integers)
 
-Work in progress
+- [x] Data.Binary.UnsignedInt
+- [x] Data.Binary.SignedInt
