@@ -6,6 +6,7 @@ import Data.Binary (tryFromInt)
 import Data.Binary.SignedInt (SignedInt, fromInt)
 import Data.Binary.UnsignedInt (UnsignedInt)
 import Data.Int (toNumber)
+import Data.List (List(..), (:))
 import Data.Maybe (Maybe, fromJust)
 import Data.Newtype (class Newtype)
 import Data.NonEmpty ((:|))
@@ -13,22 +14,27 @@ import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num.Aliases (D31, D32, d32)
 import Partial.Unsafe (unsafePartial)
 import Test.QuickCheck (class Arbitrary, arbitrary)
-import Test.QuickCheck.Gen (oneOf, suchThat)
+import Test.QuickCheck.Gen (frequency, suchThat)
 
 newtype ArbInt = ArbInt Int
+derive newtype instance eqArbInt :: Eq ArbInt
 instance arbitraryInt :: Arbitrary ArbInt where
-  arbitrary = ArbInt <$> oneOf gens where
-    gens = (pure 0) :| [ pure 1
-                       , pure (-1)
-                       , pure (bottom :: Int)
-                       , pure (top :: Int)
-                       , arbitrary
-                       ]
-
+  arbitrary = ArbInt <$> frequency gens where
+    gens = Tuple 0.05 (pure 0)      :|
+           Tuple 0.05 (pure 1)      :
+           Tuple 0.05 (pure (-1))   :
+           Tuple 0.05 (pure top)    :
+           Tuple 0.05 (pure bottom) :
+           Tuple 0.75 arbitrary     :
+           Nil
 
 newtype ArbNonNegativeInt = ArbNonNegativeInt Int
 instance arbitraryNonNegativeInt :: Arbitrary ArbNonNegativeInt where
-  arbitrary = ArbNonNegativeInt <$> suchThat arbitrary (_ >= 0)
+  arbitrary = ArbNonNegativeInt <$> frequency gens where
+    gens = Tuple 0.05 (pure top)
+        :| Tuple 0.05 (pure one)
+         : Tuple 0.90 (suchThat arbitrary (_ >= 0))
+         : Nil
 
 newtype ArbUnsignedInt31 = ArbUnsignedInt31 (UnsignedInt D31)
 derive instance newtypeArbUnsignedInt31 :: Newtype ArbUnsignedInt31 _

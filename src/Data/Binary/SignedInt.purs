@@ -3,12 +3,13 @@ module Data.Binary.SignedInt
   , fromInt
   , isNegative
   , complement
+  , flipSign
   ) where
 
 import Prelude
 
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), Overflow(Overflow), _0, _1, and, diffFixed, head, modAdd, modMul, msb, numBits, or, tail, toStringAs, xor)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), Overflow(Overflow), _0, _1, and, diffFixed, head, modAdd, msb, numBits, or, tail, toStringAs, xor)
 import Data.Binary as Bin
 import Data.Binary.BaseN (class BaseN, toBase)
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe, fromMaybe')
@@ -36,6 +37,12 @@ instance eqSignedInt :: Pos b => Eq (SignedInt b) where
 instance showSignedInt :: Pos b => Show (SignedInt b) where
   show (SignedInt n bits) =
     "SignedInt" <> show (Nat.toInt n) <> "#" <> Bin.toBinString bits
+
+flipSign :: ∀ b. Pos b => SignedInt b -> SignedInt b
+flipSign (SignedInt n bits) =
+  let { head: h, tail: (Bits t) } = Bin.uncons bits
+      bs = Bits $ A.cons (Bin.invert h) t
+  in SignedInt n bs
 
 complement :: ∀ b. Pos b => SignedInt b -> SignedInt b
 complement si = (Bin.invert >>> Bin.unsafeAdd _1) si
@@ -76,30 +83,47 @@ instance binarySignedInt :: Pos b => Binary (SignedInt b) where
   toBits (SignedInt _ bs) = bs
 
 instance boundedSignedInt :: Pos b => Bounded (SignedInt b) where
-  bottom = SignedInt undefined (Bits (A.cons _1 (A.replicate (Nat.toInt (undefined :: b)) _0)))
-  top    = SignedInt undefined (Bits (A.cons _0 (A.replicate (Nat.toInt (undefined :: b)) _1)))
+  bottom = SignedInt undefined (Bits (A.cons _1 (A.replicate (Nat.toInt (undefined :: b) - 1) _0)))
+  top    = SignedInt undefined (Bits (A.cons _0 (A.replicate (Nat.toInt (undefined :: b) - 1) _1)))
 
 instance fixedSignedInt :: Pos b => Fixed (SignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)
   tryFromBits (Bits bits) = tryFromBits' (A.length bits) (numBits p) bits where
     tryFromBits' len width bs | len == width = Just (SignedInt undefined (Bits bs))
-    tryFromBits' len width bs | len < width = Just (SignedInt undefined (Bin.addLeadingZeros width (Bits bs)))
     tryFromBits' _ _ _ = Nothing
-    p :: Proxy (SignedInt b)
-    p = Proxy
+    p = Proxy :: Proxy (SignedInt b)
 
 instance fitsIntSignedInt :: (Pos b, LtEq b D32) => FitsInt (SignedInt b) where
-  toInt si@(SignedInt _ bits) | (head bits) == _1 = negate (Bin.toInt (complement si))
-  toInt si@(SignedInt _ bits) = abs where
-    -- Safe "by construction"
-    abs = fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt (tail bits))
-    err = "Failed to convert " <> show si <> " to Int"
+  toInt si | si == top = top
+  toInt si | si == bottom = bottom
+  toInt si@(SignedInt _ bits) =
+    if isNegative si
+    then negate let (SignedInt _ bits') = complement si in abs (tail bits')
+    else abs (tail bits)
+    where
+      -- Safe "by construction"
+      abs bs = fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt bs)
+      err = "Failed to convert " <> show si <> " to Int"
+
+signExtend :: Int -> Bits -> Bits
+signExtend width bits | Bin.head bits == _0 = Bin.addLeadingZeros width bits
+signExtend width (Bits bits) =
+  let d = sub width (A.length bits)
+  in Bits if d < 1 then bits else (A.replicate d _1) <> bits
 
 instance semiringSignedInt :: Pos b => Semiring (SignedInt b) where
   zero = _0
   add = modAdd
   one = _1
-  mul = modMul
+  mul (SignedInt b as) (SignedInt _ bs) = SignedInt b (resize prod) where
+    resize xs | prodLen < len = Bin.addLeadingZeros len xs
+    resize xs | prodLen > len = Bin.drop (prodLen - len) xs
+    resize xs = xs
+    prodLen = Bin.length prod
+    prod = Bin.multiply (signExtend dlen as) (signExtend dlen bs)
+    dlen = 2 * len
+    len = Nat.toInt b
+
 
 instance ringSignedInt :: Pos b => Ring (SignedInt b) where
   sub = diffFixed

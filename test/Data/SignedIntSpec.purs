@@ -13,10 +13,9 @@ import Data.Binary.SignedInt (fromInt)
 import Data.Foldable (all)
 import Data.Newtype (unwrap)
 import Data.String as Str
-import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num (d32)
-import Test.Arbitrary (ArbInt(..), ArbSignedInt32(ArbSignedInt32), NonOverflowingMultiplicands(NonOverflowingMultiplicands))
-import Test.QuickCheck (Result, (<?>), (===))
+import Test.Arbitrary (ArbInt(..), ArbSignedInt32(ArbSignedInt32))
+import Test.QuickCheck (Result(..), (<?>), (===))
 import Test.Unit (TestSuite, suite, test)
 import Test.Unit.QuickCheck (quickCheck)
 
@@ -34,8 +33,8 @@ propNegation :: ArbSignedInt32 -> Result
 propNegation (ArbSignedInt32 si) =
   si === (foldr compose id (replicate 8 negate) $ si)
 
-propIntRoundtrip :: Int -> Result
-propIntRoundtrip i = i === i' where
+propIntRoundtrip :: ArbInt -> Result
+propIntRoundtrip (ArbInt i) = i === i' where
   i' = toInt si
   si = fromInt d32 i
 
@@ -55,12 +54,26 @@ propBinStringUniqness as = A.length sts === A.length uis where
   sts = A.nub $ map toBinString uis
   uis = A.nub $ map unwrap as
 
-propAddition :: ArbInt -> ArbInt -> Boolean
+propAddition :: ArbInt -> ArbInt -> Result
 propAddition (ArbInt a) (ArbInt b) =
-  a + b == toInt (u a + u b) where
-  u = fromInt d32
+  expected == actual
+    <?> show a <> " + " <> show b <> " (" <> show expected <> ") "
+    <> "/= " <> show (u a) <> " + " <> show (u b)
+    <> " (" <> show sum <> ", " <> show actual <> ")"
+  where
+    expected = a + b
+    actual = toInt sum
+    sum = u a + u b
+    u = fromInt d32
 
-propMultiplication :: NonOverflowingMultiplicands -> Result
-propMultiplication (NonOverflowingMultiplicands (Tuple a b)) =
-  a * b === toInt (u a * u b) where
-  u = fromInt d32
+propMultiplication :: ArbInt -> ArbInt -> Result
+propMultiplication (ArbInt a) (ArbInt b) | a == top && b == top = Success -- | PS wraps around incorrectly in this case
+propMultiplication (ArbInt a) (ArbInt b) =
+  expected == actual
+    <?> show a <> " * " <> show b <> " (" <> show expected <> ") /= "
+    <> show (si a) <> " * " <> show (si b) <> " (" <> show res <> ")"
+  where
+    actual = toInt res
+    expected = a * b
+    res = si a * si b
+    si = fromInt d32

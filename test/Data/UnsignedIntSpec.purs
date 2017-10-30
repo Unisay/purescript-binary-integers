@@ -9,13 +9,14 @@ import Data.Array as A
 import Data.Binary (toBinString, toInt)
 import Data.Binary.UnsignedInt (fromInt)
 import Data.Foldable (all)
+import Data.Int (toNumber)
 import Data.Int as Int
 import Data.Newtype (unwrap)
 import Data.String as Str
 import Data.Tuple (Tuple(..))
 import Data.Typelevel.Num (class GtEq, class Pos, d31, d32, d99)
 import Data.Typelevel.Num.Aliases (D31)
-import Test.Arbitrary (ArbNonNegativeInt(..), ArbUnsignedInt31(..), NonOverflowingMultiplicands(..))
+import Test.Arbitrary (ArbNonNegativeInt(ArbNonNegativeInt), ArbUnsignedInt31(ArbUnsignedInt31), NonOverflowingMultiplicands(..))
 import Test.QuickCheck (Result, (<?>), (===))
 import Test.Unit (TestSuite, suite, test)
 import Test.Unit.QuickCheck (quickCheck)
@@ -63,7 +64,16 @@ propBinStringUniqness as = A.length sts === A.length uis where
 
 propAddition :: ArbNonNegativeInt -> ArbNonNegativeInt -> Result
 propAddition (ArbNonNegativeInt a) (ArbNonNegativeInt b) =
-  a + b === toInt (u a + u b) where u = fromInt d31
+  expected == actual <?> show a <> " + " <> show b <> " (" <> show expected <> ") "
+    <> "/= " <> show (u a) <> " + " <> show (u b)
+    <> " (" <> show unsigned <> ", " <> show actual <> ")"
+  where
+    expected = if (toNumber a) + (toNumber b) > toNumber (top :: Int)
+               then negate (bottom - (a + b))
+               else a + b
+    actual = toInt unsigned
+    unsigned = u a + u b
+    u = fromInt d31
 
 propMultiplication :: NonOverflowingMultiplicands -> Result
 propMultiplication (NonOverflowingMultiplicands (Tuple a b)) =
