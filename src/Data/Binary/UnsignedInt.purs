@@ -28,6 +28,9 @@ newtype UnsignedInt b = UnsignedInt Bits
 instance eqUnsignedInt :: Pos b => Eq (UnsignedInt b) where
   eq (UnsignedInt bits) (UnsignedInt bits') = eq bits bits'
 
+instance ordUnsignedInt :: Pos b => Ord (UnsignedInt b) where
+  compare (UnsignedInt as) (UnsignedInt bs) = compare as bs
+
 instance showUnsignedInt :: Pos b => Show (UnsignedInt b) where
   show (UnsignedInt bits) =
     "UnsignedInt" <> show (Nat.toInt (undefined :: b)) <> "#" <> Bin.toBinString bits
@@ -36,9 +39,6 @@ instance showUnsignedInt :: Pos b => Show (UnsignedInt b) where
 -- | Behavior for negative `Int` values is unspecified.
 fromInt :: ∀ b . Pos b => GtEq b D31 => b -> Int -> UnsignedInt b
 fromInt b i = UnsignedInt (Bin.fromInt i)
-
-instance ordUnsignedInt :: Pos b => Ord (UnsignedInt b) where
-  compare (UnsignedInt as) (UnsignedInt bs) = compare as bs
 
 instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
   _0 = UnsignedInt _0

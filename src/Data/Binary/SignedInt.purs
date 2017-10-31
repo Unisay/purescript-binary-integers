@@ -33,6 +33,11 @@ newtype SignedInt b = SignedInt Bits
 instance eqSignedInt :: Pos b => Eq (SignedInt b) where
   eq (SignedInt bits) (SignedInt bits') = eq bits bits'
 
+instance ordSignedInt :: Pos b => Ord (SignedInt b) where
+  compare a b | isNegative a && not (isNegative b) = LT
+  compare a b | not (isNegative a) && isNegative b = GT
+  compare (SignedInt a) (SignedInt b) = compare a b
+
 instance showSignedInt :: Pos b => Show (SignedInt b) where
   show (SignedInt bits) =
     "SignedInt" <> show (Nat.toInt (undefined :: b)) <> "#" <> Bin.toBinString bits
@@ -61,11 +66,6 @@ fromInt b i = SignedInt signed where
 
 isNegative :: ∀ b . SignedInt b -> Boolean
 isNegative (SignedInt bits) = head bits == _1
-
-instance ordSignedInt :: Pos b => Ord (SignedInt b) where
-  compare a b | isNegative a && not (isNegative b) = LT
-  compare a b | not (isNegative a) && isNegative b = GT
-  compare (SignedInt a) (SignedInt b) = compare a b
 
 instance binarySignedInt :: Pos b => Binary (SignedInt b) where
   _0 = SignedInt _0
