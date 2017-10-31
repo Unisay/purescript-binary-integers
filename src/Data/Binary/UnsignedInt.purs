@@ -23,46 +23,44 @@ type Uint64  = UnsignedInt D64
 type Uint128 = UnsignedInt (D1 :* D2 :* D8)
 type Uint256 = UnsignedInt (D2 :* D5 :* D6)
 
-data UnsignedInt b = UnsignedInt b Bits
+newtype UnsignedInt b = UnsignedInt Bits
 
-instance eqUnsignedInt :: Pos b =>
-                          Eq (UnsignedInt b) where
-  eq (UnsignedInt n bits) (UnsignedInt n' bits') =
-    eq (Nat.toInt n) (Nat.toInt n') && eq bits bits'
+instance eqUnsignedInt :: Pos b => Eq (UnsignedInt b) where
+  eq (UnsignedInt bits) (UnsignedInt bits') = eq bits bits'
 
 instance showUnsignedInt :: Pos b => Show (UnsignedInt b) where
-  show (UnsignedInt n bits) =
-    "UnsignedInt" <> show (Nat.toInt n) <> "#" <> Bin.toBinString bits
+  show (UnsignedInt bits) =
+    "UnsignedInt" <> show (Nat.toInt (undefined :: b)) <> "#" <> Bin.toBinString bits
 
 -- | Converts `Int` value to `UnsignedInt b` for b >= 31
 -- | Behavior for negative `Int` values is unspecified.
 fromInt :: ∀ b . Pos b => GtEq b D31 => b -> Int -> UnsignedInt b
-fromInt b i = UnsignedInt b (Bin.fromInt i)
+fromInt b i = UnsignedInt (Bin.fromInt i)
 
 instance ordUnsignedInt :: Pos b => Ord (UnsignedInt b) where
-  compare (UnsignedInt n as) (UnsignedInt _ bs) = compare as bs
+  compare (UnsignedInt as) (UnsignedInt bs) = compare as bs
 
 instance binaryUnsignedInt :: Pos b => Binary (UnsignedInt b) where
-  _0 = UnsignedInt undefined _0
-  _1 = UnsignedInt undefined _1
-  and (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b (and as bs)
-  xor (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b (xor as bs)
-  or  (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b (or as bs)
-  invert (UnsignedInt b bs) = UnsignedInt b (Bin.invert bs)
-  add' bit (UnsignedInt b as) (UnsignedInt _ bs) = UnsignedInt b <$> Bin.add' bit as bs
-  leftShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.leftShift bit bs
-  rightShift bit (UnsignedInt b bs) = UnsignedInt b <$> Bin.rightShift bit bs
-  toBits (UnsignedInt b bs) = Bin.addLeadingZeros (Nat.toInt b) bs
+  _0 = UnsignedInt _0
+  _1 = UnsignedInt _1
+  and (UnsignedInt as) (UnsignedInt bs) = UnsignedInt (and as bs)
+  xor (UnsignedInt as) (UnsignedInt bs) = UnsignedInt (xor as bs)
+  or  (UnsignedInt as) (UnsignedInt bs) = UnsignedInt (or as bs)
+  invert (UnsignedInt bs) = UnsignedInt (Bin.invert bs)
+  add' bit (UnsignedInt as) (UnsignedInt bs) = UnsignedInt <$> Bin.add' bit as bs
+  leftShift bit (UnsignedInt bs) = UnsignedInt <$> Bin.leftShift bit bs
+  rightShift bit (UnsignedInt bs) = UnsignedInt <$> Bin.rightShift bit bs
+  toBits (UnsignedInt bs) = Bin.addLeadingZeros (Nat.toInt (undefined :: b)) bs
 
 instance boundedUnsignedInt :: Pos b => Bounded (UnsignedInt b) where
   bottom = _0
-  top = UnsignedInt undefined (Bits (A.replicate (Nat.toInt (undefined :: b)) _1))
+  top = UnsignedInt (Bits (A.replicate (Nat.toInt (undefined :: b)) _1))
 
 instance fixedUnsignedInt :: Pos b => Fixed (UnsignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)
   tryFromBits (Bits bits) =
     if A.length stripped <= numBits p
-    then Just (UnsignedInt undefined (Bits stripped))
+    then Just (UnsignedInt (Bits stripped))
     else Nothing
     where
       stripped = A.dropWhile (eq _0) bits
@@ -70,7 +68,7 @@ instance fixedUnsignedInt :: Pos b => Fixed (UnsignedInt b) where
       p = Proxy
 
 instance fitsIntUnsignedInt :: (Pos b, Lt b D32) => FitsInt (UnsignedInt b) where
-  toInt ui@(UnsignedInt b bits) =
+  toInt ui@(UnsignedInt bits) =
     -- Safe "by construction"
     fromMaybe' (\_ -> unsafeCrashWith err) (Bin.tryToInt bits)
       where err = "Failed to convert " <> show ui <> " to Int"
@@ -85,4 +83,4 @@ instance ringUnsignedInt :: Pos b => Ring (UnsignedInt b) where
   sub = diffFixed
 
 instance baseNUnsignedInt :: Pos b => BaseN (UnsignedInt b) where
-  toBase r (UnsignedInt b bits) = toStringAs r bits 
+  toBase r (UnsignedInt bits) = toStringAs r bits

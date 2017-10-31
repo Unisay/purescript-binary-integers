@@ -28,28 +28,27 @@ type Int64  = SignedInt D64
 type Int128 = SignedInt (D1 :* D2 :* D8)
 type Int256 = SignedInt (D2 :* D5 :* D6)
 
-data SignedInt b = SignedInt b Bits
+newtype SignedInt b = SignedInt Bits
 
 instance eqSignedInt :: Pos b => Eq (SignedInt b) where
-  eq (SignedInt n bits) (SignedInt n' bits') =
-    eq (Nat.toInt n) (Nat.toInt n') && eq bits bits'
+  eq (SignedInt bits) (SignedInt bits') = eq bits bits'
 
 instance showSignedInt :: Pos b => Show (SignedInt b) where
-  show (SignedInt n bits) =
-    "SignedInt" <> show (Nat.toInt n) <> "#" <> Bin.toBinString bits
+  show (SignedInt bits) =
+    "SignedInt" <> show (Nat.toInt (undefined :: b)) <> "#" <> Bin.toBinString bits
 
 flipSign :: ∀ b. Pos b => SignedInt b -> SignedInt b
-flipSign (SignedInt n bits) =
+flipSign (SignedInt bits) =
   let { head: h, tail: (Bits t) } = Bin.uncons bits
       bs = Bits $ A.cons (Bin.invert h) t
-  in SignedInt n bs
+  in SignedInt bs
 
 complement :: ∀ b. Pos b => SignedInt b -> SignedInt b
 complement si = (Bin.invert >>> Bin.unsafeAdd _1) si
 
 -- | Converts `Int` value to `SignedInt b` for b >= 31
 fromInt :: ∀ b . Pos b => GtEq b D32 => b -> Int -> SignedInt b
-fromInt b i = SignedInt b signed where
+fromInt b i = SignedInt signed where
   signed = twosComplement (Nat.toInt b) (i < 0) (Bin.fromInt (abs i))
   twosComplement :: Int -> Boolean -> Bits -> Bits
   twosComplement w false bits = Bin.addLeadingZeros w bits
@@ -61,44 +60,44 @@ fromInt b i = SignedInt b signed where
   compl = Bin.invert >>> Bin.unsafeAdd _1 >>> append _1
 
 isNegative :: ∀ b . SignedInt b -> Boolean
-isNegative (SignedInt _ bits) = head bits == _1
+isNegative (SignedInt bits) = head bits == _1
 
 instance ordSignedInt :: Pos b => Ord (SignedInt b) where
   compare a b | isNegative a && not (isNegative b) = LT
   compare a b | not (isNegative a) && isNegative b = GT
-  compare (SignedInt _ a) (SignedInt _ b) = compare a b
+  compare (SignedInt a) (SignedInt b) = compare a b
 
 instance binarySignedInt :: Pos b => Binary (SignedInt b) where
-  _0 = SignedInt undefined _0
-  _1 = SignedInt undefined _1
-  and (SignedInt b as) (SignedInt _ bs) = SignedInt b (and as bs)
-  xor (SignedInt b as) (SignedInt _ bs) = SignedInt b (xor as bs)
-  or (SignedInt b as) (SignedInt _ bs) = SignedInt b (or as bs)
-  invert (SignedInt b bs) = SignedInt b (Bin.invert bs)
-  add' bit (SignedInt b as) (SignedInt _ bs) =
+  _0 = SignedInt _0
+  _1 = SignedInt _1
+  and (SignedInt as) (SignedInt bs) = SignedInt (and as bs)
+  xor (SignedInt as) (SignedInt bs) = SignedInt (xor as bs)
+  or  (SignedInt as) (SignedInt bs) = SignedInt (or as bs)
+  invert (SignedInt bs) = SignedInt (Bin.invert bs)
+  add' bit (SignedInt as) (SignedInt bs) =
     let (Overflow o xs) = Bin.add' bit as bs
-    in Overflow (xor o (msb xs)) (SignedInt b xs)
-  leftShift bit (SignedInt b bs) = SignedInt b <$> Bin.leftShift bit bs
-  rightShift bit (SignedInt b bs) = SignedInt b <$> Bin.rightShift bit bs
-  toBits (SignedInt _ bs) = bs
+    in Overflow (xor o (msb xs)) (SignedInt xs)
+  leftShift bit (SignedInt bs) = SignedInt <$> Bin.leftShift bit bs
+  rightShift bit (SignedInt bs) = SignedInt <$> Bin.rightShift bit bs
+  toBits (SignedInt bs) = bs
 
 instance boundedSignedInt :: Pos b => Bounded (SignedInt b) where
-  bottom = SignedInt undefined (Bits (A.cons _1 (A.replicate (Nat.toInt (undefined :: b) - 1) _0)))
-  top    = SignedInt undefined (Bits (A.cons _0 (A.replicate (Nat.toInt (undefined :: b) - 1) _1)))
+  bottom = SignedInt (Bits (A.cons _1 (A.replicate (Nat.toInt (undefined :: b) - 1) _0)))
+  top    = SignedInt (Bits (A.cons _0 (A.replicate (Nat.toInt (undefined :: b) - 1) _1)))
 
 instance fixedSignedInt :: Pos b => Fixed (SignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)
   tryFromBits (Bits bits) = tryFromBits' (A.length bits) (numBits p) bits where
-    tryFromBits' len width bs | len == width = Just (SignedInt undefined (Bits bs))
+    tryFromBits' len width bs | len == width = Just (SignedInt (Bits bs))
     tryFromBits' _ _ _ = Nothing
     p = Proxy :: Proxy (SignedInt b)
 
 instance fitsIntSignedInt :: (Pos b, LtEq b D32) => FitsInt (SignedInt b) where
   toInt si | si == top = top
   toInt si | si == bottom = bottom
-  toInt si@(SignedInt _ bits) =
+  toInt si@(SignedInt bits) =
     if isNegative si
-    then negate let (SignedInt _ bits') = complement si in abs (tail bits')
+    then negate let (SignedInt bits') = complement si in abs (tail bits')
     else abs (tail bits)
     where
       -- Safe "by construction"
@@ -115,14 +114,14 @@ instance semiringSignedInt :: Pos b => Semiring (SignedInt b) where
   zero = _0
   add = modAdd
   one = _1
-  mul (SignedInt b as) (SignedInt _ bs) = SignedInt b (resize prod) where
+  mul (SignedInt as) (SignedInt bs) = SignedInt (resize prod) where
     resize xs | prodLen < len = Bin.addLeadingZeros len xs
     resize xs | prodLen > len = Bin.drop (prodLen - len) xs
     resize xs = xs
     prodLen = Bin.length prod
     prod = Bin.multiply (signExtend dlen as) (signExtend dlen bs)
     dlen = 2 * len
-    len = Nat.toInt b
+    len = Nat.toInt (undefined :: b)
 
 
 instance ringSignedInt :: Pos b => Ring (SignedInt b) where
@@ -130,4 +129,4 @@ instance ringSignedInt :: Pos b => Ring (SignedInt b) where
 
 instance baseNSignedInt :: Pos b => BaseN (SignedInt b) where
   toBase r s | isNegative s = "-" <> toBase r (negate s)
-  toBase r (SignedInt _ (Bits bits)) = toStringAs r (Bits $ fromMaybe [_0] (A.tail bits))
+  toBase r (SignedInt (Bits bits)) = toStringAs r (Bits $ fromMaybe [_0] (A.tail bits))
