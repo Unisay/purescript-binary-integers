@@ -8,12 +8,13 @@ import Control.Monad.Eff.Console (CONSOLE)
 import Control.Monad.Eff.Random (RANDOM)
 import Data.Array (foldr, replicate)
 import Data.Array as A
-import Data.Binary (toBinString, toInt)
-import Data.Binary.SignedInt (fromInt)
+import Data.Binary (toBinString, toInt, tryFromInt)
+import Data.Binary.SignedInt (SignedInt, fromInt)
 import Data.Foldable (all)
+import Data.Maybe (Maybe, isJust)
 import Data.Newtype (unwrap)
 import Data.String as Str
-import Data.Typelevel.Num (d32)
+import Data.Typelevel.Num (D8, d32)
 import Test.Arbitrary (ArbInt(..), ArbSignedInt32(ArbSignedInt32))
 import Test.QuickCheck (Result(..), (<?>), (===))
 import Test.Unit (TestSuite, suite, test)
@@ -21,6 +22,7 @@ import Test.Unit.QuickCheck (quickCheck)
 
 spec :: ∀ e. TestSuite (random :: RANDOM, console :: CONSOLE | e)
 spec = suite "SignedInt" do
+  test "tryFromInt" $ quickCheck propFromInt
   test "negation" $ quickCheck propNegation
   test "propIntRoundtrip" $ quickCheck propIntRoundtrip
   test "toBinString contains only bin digits" $ quickCheck propBinString
@@ -28,6 +30,13 @@ spec = suite "SignedInt" do
   test "toBinString produces unique representation" $ quickCheck propBinStringUniqness
   test "addition" $ quickCheck propAddition
   test "multiplication" $ quickCheck propMultiplication
+
+propFromInt :: ArbInt -> Result
+propFromInt (ArbInt i) = expected == actual
+  <?> "Expected Just, got Nothing: " <> show i
+  where
+    expected = i >= (-128) && i < 128
+    actual = isJust (tryFromInt i :: Maybe (SignedInt D8))
 
 propNegation :: ArbSignedInt32 -> Result
 propNegation (ArbSignedInt32 si) =

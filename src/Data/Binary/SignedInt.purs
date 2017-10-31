@@ -9,7 +9,7 @@ module Data.Binary.SignedInt
 import Prelude
 
 import Data.Array as A
-import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), Overflow(Overflow), _0, _1, and, diffFixed, head, modAdd, msb, numBits, or, tail, toStringAs, xor)
+import Data.Binary (class Binary, class FitsInt, class Fixed, Bits(Bits), Overflow(Overflow), _0, _1, and, diffFixed, head, modAdd, msb, or, tail, toStringAs, xor)
 import Data.Binary as Bin
 import Data.Binary.BaseN (class BaseN, toBase)
 import Data.Maybe (Maybe(Nothing, Just), fromMaybe, fromMaybe')
@@ -19,7 +19,6 @@ import Data.Typelevel.Num as Nat
 import Data.Typelevel.Num.Sets (class Pos)
 import Data.Typelevel.Undefined (undefined)
 import Partial.Unsafe (unsafeCrashWith)
-import Type.Proxy (Proxy(..))
 
 type Int8   = SignedInt D8
 type Int16  = SignedInt D16
@@ -87,10 +86,12 @@ instance boundedSignedInt :: Pos b => Bounded (SignedInt b) where
 
 instance fixedSignedInt :: Pos b => Fixed (SignedInt b) where
   numBits _ = Nat.toInt (undefined :: b)
-  tryFromBits (Bits bits) = tryFromBits' (A.length bits) (numBits p) bits where
-    tryFromBits' len width bs | len == width = Just (SignedInt (Bits bs))
-    tryFromBits' _ _ _ = Nothing
-    p = Proxy :: Proxy (SignedInt b)
+  tryFromBits bits =
+    case compare (Bin.length bits) width of
+      EQ -> Just (SignedInt bits)
+      LT -> Just (SignedInt $ Bin.addLeadingZeros width bits)
+      GT -> Nothing
+    where width = Nat.toInt (undefined :: b)
 
 instance fitsIntSignedInt :: (Pos b, LtEq b D32) => FitsInt (SignedInt b) where
   toInt si | si == top = top
